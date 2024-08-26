@@ -4,12 +4,14 @@ const { Server } = require('socket.io');
 const Sequelize = require('sequelize');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+require('dotenv').config();
+
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // Frontend URL
+    origin: process.env.NEXT_PUBLIC_FRONTEND_URL, // Frontend URL
     methods: ["GET", "POST"],
     credentials: true,
   }
@@ -17,14 +19,14 @@ const io = new Server(server, {
 
 // Enable CORS for Express
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.NEXT_PUBLIC_FRONTEND_URL,
   methods: ['GET', 'POST'],
   credentials: true,
 }));
 
 // Sequelize setup
-const sequelize = new Sequelize('chatdb', 'root', '', {
-  host: 'localhost',
+const sequelize = new Sequelize('u838622265_chatdb', 'u838622265_root', 'Harshit@8878', {
+  host: '193.203.184.115',
   dialect: 'mysql',
 });
 
@@ -121,5 +123,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(3001, () => {
-  console.log('Server running on http://localhost:3001');
+  console.log(`Server running on ${process.env.NEXT_PUBLIC_BACKEND_URL}`);
 });

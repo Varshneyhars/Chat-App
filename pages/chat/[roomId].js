@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import io from 'socket.io-client';
 import axios from 'axios';
 import Header from '../../components/Header';
+require('dotenv').config();
+
 
 let socket;
 

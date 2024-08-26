@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cross-env NODE_ENV=development next dev -p 3000",
+    "dev:backend": "cross-env NODE_ENV=development node server.js",
     "build": "next build",
-    "start": "next start",
+    "start": "npm run start:prod",
+    "start:prod": "concurrently \"npm run start:frontend:prod\" \"npm run start:backend:prod\"",
+    "start:frontend:prod": "cross-env NODE_ENV=production next start -p 3000",
+    "start:backend:prod": "cross-env NODE_ENV=production node server.js",
     "lint": "next lint"
   },
   "dependencies": {
@@ -15,6 +20,8 @@
     "autoprefixer": "^10.4.20",
     "axios": "^1.7.5",
     "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "my-chat-app": "file:",
     "mysql2": "^3.11.0",
@@ -26,5 +33,8 @@
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "tailwindcss": "^3.4.10"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
