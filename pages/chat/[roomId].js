@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import io from 'socket.io-client';
 import axios from 'axios';
 import Header from '../../components/Header';
 require('dotenv').config();
-
 
 let socket;
 
@@ -15,8 +14,10 @@ export default function ChatRoom() {
   const [message, setMessage] = useState('');
   const [typing, setTyping] = useState('');
   const userName = router.query.name || 'Anonymous'; // Default to 'Anonymous' if name is not provided
-
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+
+  // Reference for the messages container
+  const messagesEndRef = useRef(null);
 
   // Initialize socket connection
   useEffect(() => {
@@ -54,6 +55,11 @@ export default function ChatRoom() {
     };
   }, [roomId, backendUrl]);
 
+  // Scroll to the bottom of the messages container
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   // Handle sending a message
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -61,23 +67,26 @@ export default function ChatRoom() {
     try {
       await axios.post(`${backendUrl}/api/messages`, { roomId, userName, message });
       setMessage('');
-      socket.emit('stopTyping', roomId);
+      socket.emit('stopTyping', roomId); // Notify others that typing has stopped
     } catch (err) {
       console.error('Error sending message:', err);
     }
   };
 
   // Handle typing event
-  const handleTyping = useCallback(() => {
+  const handleTyping = () => {
     socket.emit('typing', { roomId, userName });
-  }, [roomId, userName]);
+    // Use a timeout to stop typing indication after a period of inactivity
+    clearTimeout(window.typingTimeout);
+    window.typingTimeout = setTimeout(() => socket.emit('stopTyping', roomId), 2000);
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-200">
       <Header title="ChatRoom Project" />
       <div className="container mx-auto flex-1 max-w-4xl p-4 sm:max-w-3xl md:max-w-2xl lg:max-w-xl">
         <div className="flex flex-col h-full bg-white border rounded-lg shadow-lg">
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 p-4 overflow-y-auto" style={{ maxHeight: '72vh' }}>
             <div className="space-y-4">
               {messages.map((msg) => (
                 <div
@@ -85,8 +94,7 @@ export default function ChatRoom() {
                   className={`flex ${msg.user_name === userName ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`flex items-start ${msg.user_name === userName ? 'flex-row-reverse' : 'flex-row'
-                      }`}
+                    className={`flex items-start ${msg.user_name === userName ? 'flex-row-reverse' : 'flex-row'}`}
                   >
                     <img
                       src="/profile.png" // Ensure this path is correct and matches the location in the 'public' directory
@@ -95,8 +103,8 @@ export default function ChatRoom() {
                     />
                     <div
                       className={`max-w-xs p-3 rounded-lg shadow-md ${msg.user_name === userName
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white text-gray-800'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white text-gray-800'
                         }`}
                       style={{
                         marginLeft: msg.user_name === userName ? '0' : '8px',
@@ -112,24 +120,37 @@ export default function ChatRoom() {
                   </div>
                 </div>
               ))}
+              {/* Empty div to push messages container to bottom */}
+              <div ref={messagesEndRef} />
             </div>
-            {typing && <p className="italic text-gray-600 mt-2">{typing}</p>}
           </div>
           <div className="p-4 bg-white border-t rounded-b-lg shadow-md">
-            <input
-              type="text"
-              className="w-full p-2 border border-gray-300 rounded-lg text-base"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Type your message..."
-            />
-            <button
-              className="mt-2 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-              onClick={handleSendMessage}
-            >
-              Send
-            </button>
+            {/* Typing indicator with fixed height */}
+            <div className="relative">
+              {typing && (
+                <p className="italic text-gray-600 absolute top-0 left-0 w-full mb-2">{typing}</p>
+              )}
+              {/* Input field and send button */}
+              <div className="flex flex-col pt-8"> {/* Added padding-top to account for the typing indicator height */}
+                <input
+                  type="text"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-base mb-2"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyPress={(e) => {
+                    handleTyping();
+                    if (e.key === 'Enter') handleSendMessage();
+                  }}
+                  placeholder="Type your message..."
+                />
+                <button
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+                  onClick={handleSendMessage}
+                >
+                  Send
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

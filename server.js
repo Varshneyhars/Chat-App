@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.NEXT_PUBLIC_FRONTEND_URL, // Frontend URL
+    origin: '*', // Frontend URL
     methods: ["GET", "POST"],
     credentials: true,
   }
@@ -19,11 +19,10 @@ const io = new Server(server, {
 
 // Enable CORS for Express
 app.use(cors({
-  origin: process.env.NEXT_PUBLIC_FRONTEND_URL,
-  methods: ['GET', 'POST'],
-  credentials: true,
-}));
-
+    origin: '*', // Allows all origins
+    methods: ['GET', 'POST'],
+    credentials: true,
+  }));
 // Sequelize setup
 const sequelize = new Sequelize('u838622265_chatdb', 'u838622265_root', 'Harshit@8878', {
   host: '193.203.184.115',
@@ -102,25 +101,27 @@ app.get('/api/messages/:roomId', async (req, res) => {
 
 // Socket.io events
 io.on('connection', (socket) => {
-  console.log('A user connected');
-
-  socket.on('joinRoom', (roomId) => {
-    socket.join(roomId);
-    console.log(`User joined room: ${roomId}`);
+    socket.on('joinRoom', (roomId) => {
+      socket.join(roomId);
+    });
+  
+    socket.on('typing', ({ roomId, userName }) => {
+      socket.to(roomId).emit('typing', { userName });
+    });
+  
+    socket.on('stopTyping', (roomId) => {
+      socket.to(roomId).emit('stopTyping');
+    });
+  
+    // Handle new messages
+    socket.on('newMessage', (message) => {
+      io.to(message.roomId).emit('newMessage', message);
+    });
+  
+    socket.on('disconnect', () => {
+      // Handle disconnection logic if necessary
+    });
   });
-
-  socket.on('typing', (data) => {
-    socket.to(data.roomId).emit('typing', data);
-  });
-
-  socket.on('stopTyping', (roomId) => {
-    socket.to(roomId).emit('stopTyping');
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-  });
-});
 
 server.listen(3001, () => {
   console.log(`Server running on ${process.env.NEXT_PUBLIC_BACKEND_URL}`);
